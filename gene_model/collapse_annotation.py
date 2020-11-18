@@ -73,6 +73,11 @@ class Annotation:
                     if 'gene_name' not in attributes:
                         attributes['gene_name'] = attributes['gene_id']
                     gene_id = attributes['gene_id']
+                    if 'gene_type' not in attributes:
+                        if 'gene_status' in attributes:
+                            attributes['gene_type'] = attributes['gene_status']
+                        else:
+                            attributes['gene_type'] = ''
                     g = Gene(gene_id, attributes['gene_name'], attributes['gene_type'], chrom, strand, start_pos, end_pos)
                     g.source = row[1]
                     g.phase = row[7]
@@ -84,8 +89,11 @@ class Annotation:
                     if 'transcript_name' not in attributes:
                         attributes['transcript_name'] = attributes['transcript_id']
                     transcript_id = attributes['transcript_id']
-                    t = Transcript(attributes.pop('transcript_id'), attributes.pop('transcript_name'),
-                                   attributes.pop('transcript_type'), g, start_pos, end_pos)
+                    t = Transcript(
+                        attributes.pop('transcript_id'),
+                        attributes.pop('transcript_name'),
+                        attributes.pop('transcript_type') if 'transcript_type' in attributes else '',
+                        g, start_pos, end_pos)
                     t.attributes = attributes
                     g.transcripts.append(t)
 
@@ -167,6 +175,8 @@ def add_transcript_attributes(attributes_string):
         attr_dict['gene_name'] = attr_dict['gene_id']
     if 'transcript_id' not in attr_dict:
         attr_dict['transcript_id'] = attr_dict['gene_id']
+    if 'gene_type' not in attr_dict:
+        attr_dict['gene_type'] = attr_dict['gene_status'] if 'gene_status' in attr_dict else ''
     for k in add_list:
         if k not in attr_dict:
             attr_dict[k] = attr_dict[k.replace('transcript', 'gene')]
@@ -242,6 +252,7 @@ def collapse_annotation(annot, transcript_gtf, collapsed_gtf, blacklist=set(), c
 
     with open(collapsed_gtf, 'w') as output_gtf, opener as input_gtf:
         # copy header
+        comment='##'
         for line in input_gtf:
             if line[:2]=='##' or line[:2]=='#!':
                 output_gtf.write(line)
